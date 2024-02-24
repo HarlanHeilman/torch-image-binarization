@@ -1,0 +1,4 @@
+pytorch==2.0.1
+torchvision==0.15.2
+torchist==0.2.2
+Pillow==10.2.0

@@ -1,25 +1,31 @@
+from typing import Iterable, Optional
+
 import torch
 from torch.nn import functional as f
 
 
-def histogram(image: torch.Tensor, nbins=256) -> (torch.Tensor, torch.Tensor):
+def histogram(image: torch.Tensor, bins=256, range : Optional[Iterable[float]] = None) -> (torch.Tensor, torch.Tensor):
     """Calculates the pixel value histogram for a grayscale image.
+    While `torch.histogram` does not work with CUDA or `torch.compile`,
+    this implementation does.
 
     Parameters:
         image: grayscale input image of shape (B, H, W) and float dtype.
         nbins: number of bins used to calculate the image histogram.
+        range: value range of the bins of form (min, max).
 
     Returns:
         (counts, bin_edges): Two tensors of shape (nbins,)
     """
-    bin_edges = torch.linspace(
-        start=0, end=1, steps=nbins, device=image.device, dtype=image.dtype
-    )
-    idx = torch.bucketize(image, bin_edges, right=False)
-    weights = torch.ones_like(image)
-    counts = torch.zeros(nbins, device=image.device, dtype=image.dtype).scatter_reduce(
-        0, idx, weights, reduce="sum"
-    )
+    if not range:
+        range_min, range_max = image.min(), image.max()
+    elif len(range) == 2:
+        range_min, range_max = range[0], range[1]
+    else:
+        raise ValueError("range needs to be iterable of form: (min, max).")
+    counts = torch.empty(bins, device=image.device, dtype=image.dtype)
+    torch.histc(image, bins, min=range_min, max=range_max, out=counts)
+    bin_edges = torch.linspace(range_min, range_max, bins, device=counts.device, dtype=counts.dtype)
     return counts, bin_edges
 
 
@@ -42,7 +48,7 @@ def threshold_otsu(image: torch.Tensor, nbins=256) -> torch.Tensor:
     >>> threshold = threshold_otsu(image)
     >>> binary = image <= threshold
     """
-    counts, bin_edges = histogram(image, nbins)
+    counts, bin_edges = histogram(image, nbins, range=(0, 1))
 
     # class probabilities for all possible thresholds
     weight1 = torch.cumsum(counts, dim=0)

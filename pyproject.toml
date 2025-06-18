@@ -1,0 +1,18 @@
+[project]
+name = "torch-image-binarization"
+version = "0.1.0"
+description = "`torch.compile`-compatible image binarization algorithm implemented in PyTorch."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pillow>=11.2.1",
+    "torch>=2.7.1",
+    "torchvision>=0.22.1",
+]
+
+[project.scripts]
+binarize = "torch_image_binarization:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
